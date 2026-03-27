@@ -1,0 +1,12 @@
+{
+  "functions": {
+    "app/api/convert/route.ts": { "maxDuration": 120 },
+    "app/api/insights/route.ts": { "maxDuration": 60 }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/check-subscriptions",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}

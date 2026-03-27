@@ -1,26 +1,90 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* === Colors === */
+  --color-brutal-black: #141414;
+  --color-brutal-yellow: #FFE600;
+  --color-brutal-cyan: #00D4FF;
+  --color-brutal-pink: #FF6B6B;
+  --color-brutal-green: #22C55E;
+  --color-brutal-bg: #F5F3EF;
+  --color-brutal-card: #FFFFFF;
+  --color-brutal-muted: #94918A;
+
+  /* === Fonts === */
+  --font-mono: "Space Mono", monospace;
+  --font-body: "Inter", sans-serif;
+
+  /* === Shadows === */
+  --shadow-brutal: 5px 5px 0px #141414;
+  --shadow-brutal-sm: 3px 3px 0px #141414;
+  --shadow-brutal-press: 1px 1px 0px #141414;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* === Base === */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-brutal-bg);
+  color: var(--color-brutal-black);
+  font-family: var(--font-body);
+}
+
+/* === Neo-brutalism utility classes === */
+.neo-border {
+  border: 3px solid var(--color-brutal-black);
+}
+
+.neo-shadow {
+  box-shadow: var(--shadow-brutal);
+}
+
+.neo-shadow-sm {
+  box-shadow: var(--shadow-brutal-sm);
+}
+
+.neo-shadow-press {
+  box-shadow: var(--shadow-brutal-press);
+}
+
+.neo-shadow-hover:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0px #141414;
+}
+
+.neo-shadow-active:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-brutal-press);
+}
+
+/* === Processing animation === */
+@keyframes pulse-bar {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+.processing-bar {
+  animation: pulse-bar 0.8s ease-in-out infinite;
+}
+.processing-bar:nth-child(2) { animation-delay: 0.1s; }
+.processing-bar:nth-child(3) { animation-delay: 0.2s; }
+.processing-bar:nth-child(4) { animation-delay: 0.3s; }
+.processing-bar:nth-child(5) { animation-delay: 0.4s; }
+
+/* === Fade-in animation === */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out forwards;
 }
