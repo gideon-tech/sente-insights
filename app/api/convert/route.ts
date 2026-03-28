@@ -66,18 +66,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Daily conversion limit reached', limit: config.dailyLimit }, { status: 429 });
     }
 
-    // Upload to BSC and get job
-    const arrayBuffer = await file.arrayBuffer();
-    const job = await uploadAndConvert(arrayBuffer, file.name, file.type);
+    const fileInfo = { name: file.name, size: file.size, type: file.type };
+    console.log(`[${new Date().toISOString()}] CONVERT START:`, JSON.stringify(fileInfo));
 
-    // Poll until complete and get result
-    const result = await waitUntilComplete(job.job_id);
+    // Step 1: Upload to BSC
+    let job;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      job = await uploadAndConvert(arrayBuffer, file.name, file.type);
+      console.log(`[${new Date().toISOString()}] CONVERT UPLOAD OK: job_id=${job.job_id}`, JSON.stringify(job));
+    } catch (err) {
+      console.error(`[${new Date().toISOString()}] CONVERT UPLOAD FAILED:`, JSON.stringify(fileInfo), err instanceof Error ? err.message : err);
+      throw err;
+    }
 
-    // Extract transactions and raw table data from BSC result
+    // Step 2: Poll until complete
+    let result;
+    try {
+      result = await waitUntilComplete(job.job_id);
+      console.log(`[${new Date().toISOString()}] CONVERT POLL OK: job_id=${job.job_id}, keys=${Object.keys(result)}`);
+    } catch (err) {
+      console.error(`[${new Date().toISOString()}] CONVERT POLL FAILED: job_id=${job.job_id}`, err instanceof Error ? err.message : err);
+      throw err;
+    }
+
+    // Step 3: Extract transactions and raw table data from BSC result
     const bscData = result.data as { headers?: string[]; transactions?: string[][] } | undefined;
     const headers = bscData?.headers || [];
     const rawRows = bscData?.transactions || [];
     const transactions = normalizeTransactions(result);
+
+    console.log(`[${new Date().toISOString()}] CONVERT RESULT: job_id=${job.job_id}, headers=${headers.length}, rows=${rawRows.length}, transactions=${transactions.length}`);
+
+    if (rawRows.length === 0) {
+      console.error(`[${new Date().toISOString()}] CONVERT EMPTY RESULT: job_id=${job.job_id}, full_response=${JSON.stringify(result).slice(0, 2000)}`);
+    }
 
     // Increment usage
     await supabaseAdmin.rpc('increment_usage', {
@@ -108,6 +131,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Conversion failed';
+    console.error(`[${new Date().toISOString()}] CONVERT ERROR:`, message, error instanceof Error ? error.stack : '');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
