@@ -147,7 +147,6 @@ function PricingContent() {
       window.location.href = '/login';
       return;
     }
-    if (isAlreadyPremium) return;
     setShowCheckout(true);
   }
 
@@ -266,12 +265,7 @@ function PricingContent() {
                 {tier.ctaHref === '#checkout' ? (
                   <button
                     onClick={handlePremiumClick}
-                    disabled={isAlreadyPremium}
-                    className={`w-full py-3.5 font-mono font-bold text-sm rounded-[4px] cursor-pointer transition-colors ${
-                      isAlreadyPremium
-                        ? 'bg-brutal-black/50 text-brutal-white cursor-not-allowed'
-                        : 'bg-brutal-black text-brutal-white hover:opacity-80'
-                    }`}
+                    className="w-full py-3.5 font-mono font-bold text-sm rounded-[4px] cursor-pointer transition-colors bg-brutal-black text-brutal-white hover:opacity-80"
                   >
                     {isAlreadyPremium ? 'Current Plan' : tier.cta}
                   </button>
