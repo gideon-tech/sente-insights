@@ -7,7 +7,7 @@ export default function AboutPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 pt-[73px]">
         <PageHeader
           title="About Us"
           subtitle="We're building the financial infrastructure the world deserves."

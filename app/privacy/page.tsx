@@ -111,7 +111,7 @@ export default function PrivacyPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 pt-[73px]">
         <PageHeader
           title="Privacy Policy"
           subtitle="Last updated: March 2026"

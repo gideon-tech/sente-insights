@@ -1,5 +1,19 @@
 import { Tier } from '@/types';
 
+// Admin emails always get premium access regardless of subscription
+const ADMIN_EMAILS = [
+  'paintingislife592@gmail.com',
+];
+
+export function isAdmin(email: string): boolean {
+  return ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
+export function getEffectiveTier(tier: Tier, email?: string | null): Tier {
+  if (email && isAdmin(email)) return 'enterprise';
+  return tier;
+}
+
 export const TIER_CONFIG = {
   anonymous:  { dailyLimit: 2,        formats: ['csv', 'json'] as const,           insights: false, history: false },
   free:       { dailyLimit: 5,        formats: ['csv', 'json', 'excel'] as const,  insights: false, history: true },

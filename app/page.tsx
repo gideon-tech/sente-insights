@@ -26,7 +26,7 @@ export default function LandingPage() {
             Join 5,000+ businesses automating their financial workflows across East Africa.
           </p>
           <a href="/convert">
-            <button className="bg-brutal-black text-white px-12 py-6 border-[3px] border-brutal-black font-mono font-black text-2xl neo-shadow transition-transform hover:-translate-x-1 hover:-translate-y-1 rounded-[4px] cursor-pointer">
+            <button className="bg-brutal-black text-brutal-white px-12 py-6 border-[3px] border-brutal-black font-mono font-black text-2xl neo-shadow transition-transform hover:-translate-x-1 hover:-translate-y-1 rounded-[4px] cursor-pointer">
               GET STARTED FOR FREE
             </button>
           </a>

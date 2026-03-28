@@ -41,7 +41,7 @@ const tiers = [
       'Custom Categories',
     ],
     cta: 'Go Premium',
-    ctaHref: '/pricing',
+    ctaHref: '/pricing#checkout',
     highlighted: true,
     badge: 'Most Popular',
   },
@@ -82,7 +82,7 @@ export default function PricingCards() {
             `}
           >
             {tier.badge && (
-              <div className="absolute top-4 right-4 bg-brutal-black text-white text-[9px] font-mono font-black px-2 py-1 uppercase tracking-widest rounded-[4px]">
+              <div className="absolute top-4 right-4 bg-brutal-black text-brutal-white text-[9px] font-mono font-black px-2 py-1 uppercase tracking-widest rounded-[4px]">
                 {tier.badge}
               </div>
             )}
@@ -113,11 +113,11 @@ export default function PricingCards() {
 
             <Link href={tier.ctaHref}>
               {tier.highlighted ? (
-                <button className="w-full bg-brutal-black text-white py-3.5 font-mono font-bold text-sm hover:bg-neutral-800 transition-colors rounded-[4px] cursor-pointer">
+                <button className="w-full bg-brutal-black text-brutal-white py-3.5 font-mono font-bold text-sm hover:opacity-80 transition-colors rounded-[4px] cursor-pointer">
                   {tier.cta}
                 </button>
               ) : (
-                <button className="w-full border-[3px] border-brutal-black py-3 font-mono font-bold text-sm hover:bg-brutal-black hover:text-white transition-colors rounded-[4px] cursor-pointer">
+                <button className="w-full border-[3px] border-brutal-black py-3 font-mono font-bold text-sm hover:bg-brutal-black hover:text-brutal-white transition-colors rounded-[4px] cursor-pointer">
                   {tier.cta}
                 </button>
               )}

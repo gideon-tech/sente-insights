@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { TIER_CONFIG } from '@/lib/tiers';
+import { TIER_CONFIG, getEffectiveTier } from '@/lib/tiers';
 import { cookies } from 'next/headers';
 import type { Tier } from '@/types';
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
           .select('tier')
           .eq('id', userId)
           .single();
-        tier = (profile?.tier || 'free') as Tier;
+        tier = getEffectiveTier((profile?.tier || 'free') as Tier, user.email);
       }
     }
 

@@ -61,7 +61,7 @@ export default function TermsPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 pt-[73px]">
         <PageHeader
           title="Terms & Conditions"
           subtitle="Last updated: March 2026"

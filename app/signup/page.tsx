@@ -42,15 +42,8 @@ export default function SignupPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1 flex items-center justify-center px-6 py-24">
+      <main className="flex-1 pt-[73px] flex items-center justify-center px-6 py-24">
         <div className="w-full max-w-[400px] bg-brutal-card border-[3px] border-brutal-black neo-shadow p-8 rounded-[4px]">
-          {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <div className="w-12 h-12 bg-brutal-yellow border-[3px] border-brutal-black flex items-center justify-center rounded-[4px]">
-              <span className="font-mono font-black text-xl text-brutal-black">S</span>
-            </div>
-          </div>
-
           <h1 className="font-mono font-bold text-2xl text-center mb-8">Create Account</h1>
 
           <form onSubmit={handleSignup} className="flex flex-col gap-5">

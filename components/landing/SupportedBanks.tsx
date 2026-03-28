@@ -50,26 +50,26 @@ export default function SupportedBanks() {
   }
 
   return (
-    <section className="bg-brutal-black text-white py-24 px-6 overflow-hidden">
+    <section className="bg-brutal-black text-brutal-white py-24 px-6 overflow-hidden">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col items-center text-center mb-16 gap-4">
           <h2 className="font-mono font-black text-4xl md:text-6xl tracking-tighter uppercase max-w-2xl">
             Works With Your Bank
           </h2>
-          <p className="font-body text-neutral-400 max-w-lg">
+          <p className="font-body text-brutal-muted max-w-lg">
             We support banks and mobile money providers worldwide. Search below to check yours.
           </p>
         </div>
 
         {/* Search */}
         <form onSubmit={handleSearch} className="max-w-xl mx-auto mb-12">
-          <div className="flex border-[3px] border-white rounded-[4px] overflow-hidden">
+          <div className="flex border-[3px] border-brutal-white rounded-[4px] overflow-hidden">
             <input
               type="text"
               placeholder="Search your bank or provider..."
               value={query}
               onChange={(e) => { setQuery(e.target.value); setSearched(false); }}
-              className="flex-1 px-5 py-4 bg-neutral-900 text-white font-body text-sm outline-none placeholder:text-neutral-500"
+              className="flex-1 px-5 py-4 bg-brutal-card text-brutal-black font-body text-sm outline-none placeholder:text-brutal-muted"
             />
             <button
               type="submit"
@@ -94,11 +94,11 @@ export default function SupportedBanks() {
                   ))}
                 </div>
               ) : searched ? (
-                <div className="bg-neutral-800 border-[2px] border-neutral-700 p-4 rounded-[4px] text-center">
-                  <p className="font-body text-sm text-neutral-300 mb-2">
+                <div className="bg-brutal-card border-[2px] border-brutal-muted p-4 rounded-[4px] text-center">
+                  <p className="font-body text-sm text-brutal-black mb-2">
                     Don&apos;t see your bank? We likely still support it.
                   </p>
-                  <p className="font-mono text-xs text-neutral-500">
+                  <p className="font-mono text-xs text-brutal-muted">
                     Upload any bank statement PDF and our AI will extract the data automatically.
                   </p>
                 </div>
@@ -109,14 +109,14 @@ export default function SupportedBanks() {
 
         {/* Featured providers */}
         <div className="flex flex-col items-center gap-6">
-          <span className="font-mono font-bold text-xs uppercase tracking-[0.2em] text-neutral-500">
+          <span className="font-mono font-bold text-xs uppercase tracking-[0.2em] text-brutal-muted">
             Featured Integrations
           </span>
           <div className="flex flex-wrap justify-center items-center gap-6">
             {FEATURED_PROVIDERS.map((provider) => (
               <div
                 key={provider.name}
-                className="bg-white rounded-[4px] p-4 flex items-center justify-center"
+                className="bg-brutal-white rounded-[4px] p-4 flex items-center justify-center"
               >
                 <Image
                   src={provider.logo}
@@ -128,7 +128,7 @@ export default function SupportedBanks() {
               </div>
             ))}
           </div>
-          <p className="font-mono text-xs text-neutral-500 mt-2">
+          <p className="font-mono text-xs text-brutal-muted mt-2">
             + hundreds more banks and providers globally
           </p>
         </div>

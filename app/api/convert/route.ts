@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { uploadStatement, waitUntilReady, convertStatement, setPassword } from '@/lib/bsc';
+import { uploadAndConvert, waitUntilComplete } from '@/lib/bsc';
+import { TIER_CONFIG, getEffectiveTier } from '@/lib/tiers';
 import { cookies } from 'next/headers';
+import type { Tier } from '@/types';
+import type { Transaction } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const format = (formData.get('format') as string) || 'JSON';
-    const pdfPassword = formData.get('password') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
           .select('tier')
           .eq('id', userId)
           .single();
-        tier = profile?.tier || 'free';
+        tier = getEffectiveTier((profile?.tier || 'free') as Tier, user.email);
       }
     }
 
@@ -39,7 +41,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Check usage limits
-    const { TIER_CONFIG } = await import('@/lib/tiers');
     const config = TIER_CONFIG[tier as keyof typeof TIER_CONFIG];
 
     let currentUsage = 0;
@@ -65,25 +66,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Daily conversion limit reached', limit: config.dailyLimit }, { status: 429 });
     }
 
-    // Upload to BSC
+    // Upload to BSC and get job
     const arrayBuffer = await file.arrayBuffer();
-    const uploadResult = await uploadStatement(arrayBuffer, file.name);
-    const bscUuid = uploadResult[0].uuid;
-    const state = uploadResult[0].state;
+    const job = await uploadAndConvert(arrayBuffer, file.name, file.type);
 
-    // Set password if provided
-    if (pdfPassword) {
-      await setPassword(bscUuid, pdfPassword);
-    }
+    // Poll until complete and get result
+    const result = await waitUntilComplete(job.job_id);
 
-    // Wait if processing (scanned/image PDF)
-    if (state === 'PROCESSING') {
-      await waitUntilReady(bscUuid);
-    }
-
-    // Convert
-    const result = await convertStatement(bscUuid, format === 'excel' ? 'JSON' : 'JSON');
-    const transactions = result[0]?.normalised || [];
+    // Extract transactions and raw table data from BSC result
+    const bscData = result.data as { headers?: string[]; transactions?: string[][] } | undefined;
+    const headers = bscData?.headers || [];
+    const rawRows = bscData?.transactions || [];
+    const transactions = normalizeTransactions(result);
 
     // Increment usage
     await supabaseAdmin.rpc('increment_usage', {
@@ -98,10 +92,9 @@ export async function POST(request: NextRequest) {
         filename: file.name,
         file_type: file.type,
         output_format: format,
-        page_count: uploadResult[0].pdfType === 'IMAGE_BASED' ? 1 : null,
         transaction_count: transactions.length,
         status: 'completed',
-        bsc_uuid: bscUuid,
+        bsc_uuid: job.job_id,
       });
     }
 
@@ -110,9 +103,56 @@ export async function POST(request: NextRequest) {
       transactionCount: transactions.length,
       filename: file.name,
       format,
+      headers,
+      rawRows,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Conversion failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+function normalizeTransactions(result: Record<string, unknown>): Transaction[] {
+  const data = result.data as { headers?: string[]; transactions?: unknown[][] } | undefined;
+
+  // BSC returns { data: { headers: [...], transactions: [[...], ...] } }
+  if (data?.headers && data?.transactions) {
+    const headers = data.headers.map((h: string) => h.toLowerCase());
+    return data.transactions.map((row: unknown[]) => {
+      const obj: Record<string, string> = {};
+      headers.forEach((h: string, i: number) => {
+        obj[h] = String(row[i] ?? '');
+      });
+      return rowToTransaction(obj);
+    });
+  }
+
+  return [];
+}
+
+function parseAmount(val: string): number {
+  // Handle values like "-5000.00", "+2642558.00", "UGX 2,958,044.78"
+  const cleaned = val.replace(/[A-Z]{2,}\s*/gi, '').replace(/,/g, '').trim();
+  return parseFloat(cleaned) || 0;
+}
+
+function rowToTransaction(row: Record<string, string>): Transaction {
+  const amount = parseAmount(row['amount'] || '0');
+  const balance = parseAmount(row['balance'] || '0');
+
+  // Description from reference, account name, or to/from
+  const description = [
+    row['reference'],
+    row['account name'],
+    row['to/from'],
+  ].filter(Boolean).join(' — ') || row['payment type'] || '';
+
+  return {
+    date: row['date & time'] || row['date'] || '',
+    description,
+    debit: amount < 0 ? Math.abs(amount) : 0,
+    credit: amount > 0 ? amount : 0,
+    balance,
+    amount: Math.abs(amount),
+  };
 }

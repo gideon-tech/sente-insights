@@ -6,8 +6,8 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  guest: 'bg-neutral-200 text-brutal-black',
-  free: 'bg-neutral-200 text-brutal-black',
+  guest: 'bg-brutal-surface text-brutal-black',
+  free: 'bg-brutal-surface text-brutal-black',
   premium: 'bg-brutal-yellow text-brutal-black',
   enterprise: 'bg-brutal-cyan text-brutal-black',
 };

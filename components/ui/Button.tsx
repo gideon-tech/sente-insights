@@ -16,7 +16,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   secondary: 'bg-brutal-card text-brutal-black neo-border neo-shadow neo-shadow-hover neo-shadow-active',
   cyan: 'bg-brutal-cyan text-brutal-black neo-border neo-shadow neo-shadow-hover neo-shadow-active',
   green: 'bg-brutal-green text-brutal-black neo-border neo-shadow neo-shadow-hover neo-shadow-active',
-  outline: 'bg-transparent text-brutal-black neo-border hover:bg-brutal-black hover:text-white transition-colors',
+  outline: 'bg-transparent text-brutal-black neo-border hover:bg-brutal-black hover:text-brutal-white transition-colors',
   ghost: 'bg-transparent text-brutal-black hover:text-brutal-yellow transition-colors',
 };
 

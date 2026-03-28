@@ -24,7 +24,7 @@ export default function ContactPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 pt-[73px]">
         <PageHeader
           title="Contact Us"
           subtitle="Got a question, feedback, or partnership inquiry? We'd love to hear from you."

@@ -21,7 +21,7 @@ export default function HowItWorks() {
   ];
 
   return (
-    <section className="bg-[#DEDDD8] border-y-[3px] border-brutal-black py-20 px-6">
+    <section className="bg-brutal-surface border-y-[3px] border-brutal-black py-20 px-6">
       <div className="max-w-7xl mx-auto">
         <h2 className="font-mono font-black text-4xl md:text-6xl mb-16 tracking-tighter uppercase">
           The Process
@@ -36,7 +36,7 @@ export default function HowItWorks() {
                 {step.num}
               </span>
               <div className="relative z-10">
-                <div className="text-4xl mb-6 bg-brutal-black text-white p-3 w-fit rounded-[4px]">
+                <div className="text-4xl mb-6 bg-brutal-black text-brutal-white p-3 w-fit rounded-[4px]">
                   {step.icon}
                 </div>
                 <h3 className="font-mono font-bold text-2xl mb-4">{step.title}</h3>

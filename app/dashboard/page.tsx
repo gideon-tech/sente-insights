@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -9,25 +9,46 @@ import Badge from '@/components/ui/Badge';
 import Tag from '@/components/ui/Tag';
 import Label from '@/components/ui/Label';
 import Card from '@/components/ui/Card';
-
-const DUMMY_HISTORY = [
-  { id: '1', date: '2026-02-08', filename: 'equity_feb.pdf', type: 'Bank', pages: 3, txns: 48, format: 'CSV', status: 'completed' },
-  { id: '2', date: '2026-02-06', filename: 'mpesa_mar.jpg', type: 'Mobile Money', pages: 1, txns: 23, format: 'JSON', status: 'completed' },
-  { id: '3', date: '2026-02-04', filename: 'airtel_q1.pdf', type: 'Mobile Money', pages: 7, txns: 156, format: 'Excel', status: 'completed' },
-  { id: '4', date: '2026-02-01', filename: 'mtn_momo.png', type: 'Mobile Money', pages: 1, txns: 12, format: 'CSV', status: 'completed' },
-  { id: '5', date: '2026-01-28', filename: 'stanbic_jan.pdf', type: 'Bank', pages: 5, txns: 89, format: 'JSON', status: 'completed' },
-];
+import { useAuth } from '@/lib/auth-context';
+import type { Conversion } from '@/types';
 
 export default function DashboardPage() {
-  // TODO: Replace with real auth state
-  const isLoggedIn = true;
-  const user = { email: 'jane@example.com', tier: 'free' as 'free' | 'premium' | 'enterprise' };
+  const { profile, session, loading: authLoading } = useAuth();
+  const [conversions, setConversions] = useState<Conversion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  if (!isLoggedIn) {
+  useEffect(() => {
+    if (authLoading) return;
+    if (!session?.access_token) {
+      setLoading(false);
+      return;
+    }
+
+    async function fetchHistory() {
+      try {
+        const res = await fetch('/api/history', {
+          headers: { Authorization: `Bearer ${session!.access_token}` },
+        });
+        if (!res.ok) throw new Error('Failed to load history');
+        const data = await res.json();
+        setConversions(data.conversions || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load history');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchHistory();
+  }, [session, authLoading]);
+
+  // Not logged in
+  if (!authLoading && !profile) {
     return (
       <>
         <Navbar />
-        <main className="flex-1 flex items-center justify-center px-6 py-24">
+        <main className="flex-1 pt-[73px] flex items-center justify-center px-6 py-24">
           <Card className="p-8 max-w-md text-center">
             <span className="text-4xl mb-4 block">🔒</span>
             <h2 className="font-mono font-bold text-xl mb-2">Sign in to view your dashboard</h2>
@@ -44,29 +65,73 @@ export default function DashboardPage() {
     );
   }
 
-  const totalConversions = DUMMY_HISTORY.length;
-  const totalTxns = DUMMY_HISTORY.reduce((sum, h) => sum + h.txns, 0);
-  const totalPages = DUMMY_HISTORY.reduce((sum, h) => sum + h.pages, 0);
+  // Loading state
+  if (authLoading || loading) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 pt-[73px] px-6 py-8 max-w-6xl mx-auto w-full">
+          <div className="animate-pulse space-y-6">
+            <div className="h-10 w-48 bg-brutal-surface rounded" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-24 bg-brutal-surface border-[3px] border-brutal-black rounded-[4px]" />
+              ))}
+            </div>
+            <div className="h-64 bg-brutal-surface border-[3px] border-brutal-black rounded-[4px]" />
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
-  const typeColor = (type: string) => type === 'Bank' ? 'cyan' as const : 'yellow' as const;
-  const formatColor = (fmt: string) => {
-    if (fmt === 'CSV') return 'gray' as const;
-    if (fmt === 'JSON') return 'green' as const;
-    return 'cyan' as const;
+  const tier = profile?.tier || 'free';
+  const completed = conversions.filter((c) => c.status === 'completed');
+  const totalConversions = completed.length;
+  const totalTxns = completed.reduce((sum, c) => sum + (c.transaction_count || 0), 0);
+  const totalPages = completed.reduce((sum, c) => sum + (c.page_count || 0), 0);
+
+  const fileTypeTag = (fileType: string | null) => {
+    if (!fileType) return <Tag color="gray">Unknown</Tag>;
+    const lower = fileType.toLowerCase();
+    if (lower.includes('pdf')) return <Tag color="cyan">PDF</Tag>;
+    if (lower.includes('png') || lower.includes('jpg') || lower.includes('jpeg')) return <Tag color="yellow">Image</Tag>;
+    if (lower.includes('csv')) return <Tag color="green">CSV</Tag>;
+    return <Tag color="gray">{fileType}</Tag>;
+  };
+
+  const statusDisplay = (status: Conversion['status']) => {
+    switch (status) {
+      case 'completed':
+        return <span className="text-brutal-green font-bold">✓</span>;
+      case 'processing':
+      case 'ready':
+        return <span className="text-brutal-yellow font-bold">⏳</span>;
+      case 'failed':
+        return <span className="text-brutal-pink font-bold">✗</span>;
+      default:
+        return <span className="text-brutal-muted">—</span>;
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   return (
     <>
-      <Navbar user={user} />
+      <Navbar />
       <main className="flex-1 px-6 py-8 max-w-6xl mx-auto w-full">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-3">
             <h1 className="font-mono font-black text-3xl tracking-tighter">Dashboard</h1>
-            <Badge variant={user.tier} />
+            <Badge variant={tier} />
           </div>
           <div className="flex gap-3">
-            {user.tier !== 'premium' && (
+            {tier !== 'premium' && tier !== 'enterprise' && (
               <Link href="/pricing">
                 <Button variant="primary" size="sm">Upgrade</Button>
               </Link>
@@ -93,35 +158,51 @@ export default function DashboardPage() {
           </Card>
         </div>
 
+        {error && (
+          <div className="mb-6 p-4 bg-brutal-pink/10 border-[3px] border-brutal-pink rounded-[4px]">
+            <p className="font-mono text-sm text-brutal-pink font-bold">{error}</p>
+          </div>
+        )}
+
         {/* History Table */}
-        <div className="bg-brutal-card border-[3px] border-brutal-black rounded-[4px] overflow-x-auto neo-shadow">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b-[3px] border-brutal-black bg-neutral-50">
-                <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider">Date</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider">File</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider">Type</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider text-right">Pages</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider text-right">Txns</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider">Format</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="font-mono text-xs">
-              {DUMMY_HISTORY.map((h) => (
-                <tr key={h.id} className="border-b border-neutral-200 last:border-0 hover:bg-neutral-50">
-                  <td className="px-4 py-3 whitespace-nowrap">{h.date}</td>
-                  <td className="px-4 py-3 font-bold">{h.filename}</td>
-                  <td className="px-4 py-3"><Tag color={typeColor(h.type)}>{h.type}</Tag></td>
-                  <td className="px-4 py-3 text-right">{h.pages}</td>
-                  <td className="px-4 py-3 text-right">{h.txns}</td>
-                  <td className="px-4 py-3"><Tag color={formatColor(h.format)}>{h.format}</Tag></td>
-                  <td className="px-4 py-3 text-center text-brutal-green font-bold">✓</td>
+        {conversions.length === 0 ? (
+          <Card className="p-10 text-center">
+            <p className="font-mono text-lg font-bold mb-2">No conversions yet</p>
+            <p className="font-body text-sm text-brutal-muted mb-6">
+              Upload your first bank or mobile money statement to get started.
+            </p>
+            <Link href="/convert">
+              <Button variant="primary">Convert a Statement</Button>
+            </Link>
+          </Card>
+        ) : (
+          <div className="bg-brutal-card border-[3px] border-brutal-black rounded-[4px] overflow-x-auto neo-shadow">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b-[3px] border-brutal-black bg-brutal-surface">
+                  <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider">Date</th>
+                  <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider">File</th>
+                  <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider">Type</th>
+                  <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider text-right">Pages</th>
+                  <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider text-right">Txns</th>
+                  <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider text-center">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="font-mono text-xs">
+                {conversions.map((c) => (
+                  <tr key={c.id} className="border-b border-brutal-muted/30 last:border-0 hover:bg-brutal-surface">
+                    <td className="px-4 py-3 whitespace-nowrap">{formatDate(c.created_at)}</td>
+                    <td className="px-4 py-3 font-bold max-w-[200px] truncate">{c.filename}</td>
+                    <td className="px-4 py-3">{fileTypeTag(c.file_type)}</td>
+                    <td className="px-4 py-3 text-right">{c.page_count ?? '—'}</td>
+                    <td className="px-4 py-3 text-right">{c.transaction_count ?? '—'}</td>
+                    <td className="px-4 py-3 text-center">{statusDisplay(c.status)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
       <Footer />
     </>

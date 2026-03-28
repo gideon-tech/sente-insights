@@ -35,26 +35,43 @@ export interface Insight {
   id: string;
   conversion_id: string;
   user_id: string;
-  spending_breakdown: SpendingCategory[];
-  monthly_summary: MonthlySummary;
-  habit_insights: string[];
+  spending_breakdown: {
+    category: string;
+    amount: number;
+    percentage: number;
+    trend: 'high' | 'normal' | 'low';
+    tip: string;
+  }[];
+  monthly_summary: {
+    totalIncome: number;
+    totalExpenses: number;
+    totalFees: number;
+    savingsRate: number;
+    currency: string;
+    period: string;
+    verdict: string;
+  };
+  habit_insights: {
+    title: string;
+    observation: string;
+    action: string;
+    potentialSaving: number;
+    currency: string;
+  }[];
+  top_recipients: {
+    name: string;
+    amount: number;
+    count: number;
+    category: string;
+  }[];
+  financial_health_score: {
+    score: number;
+    tier: 'Excellent' | 'Good' | 'Fair' | 'Needs Work';
+    factors: { name: string; score: number; detail: string }[];
+    lenderSummary: string;
+  };
   period_covered: string;
   created_at: string;
-}
-
-export interface SpendingCategory {
-  category: string;
-  amount: number;
-  percentage: number;
-  currency: string;
-}
-
-export interface MonthlySummary {
-  totalIncome: number;
-  totalExpenses: number;
-  savingsRate: number;
-  currency: string;
-  period: string;
 }
 
 export interface Subscription {
@@ -92,10 +109,3 @@ export interface BSCConvertResponse {
   normalised: Transaction[];
 }
 
-export interface InsightsResponse {
-  spendingBreakdown: SpendingCategory[];
-  monthlySummary: MonthlySummary;
-  habitInsights: string[];
-  transactionCount: number;
-  periodCovered: string;
-}

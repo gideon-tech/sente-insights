@@ -10,6 +10,8 @@
   --color-brutal-bg: #F5F3EF;
   --color-brutal-card: #FFFFFF;
   --color-brutal-muted: #94918A;
+  --color-brutal-white: #FFFFFF;
+  --color-brutal-surface: #F5F5F2;
 
   /* === Fonts === */
   --font-mono: "Space Mono", monospace;
@@ -30,6 +32,8 @@ body {
   background: var(--color-brutal-bg);
   color: var(--color-brutal-black);
   font-family: var(--font-body);
+  transition-property: color, background-color;
+  transition-duration: 0s;
 }
 
 /* === Neo-brutalism utility classes === */
@@ -51,7 +55,7 @@ body {
 
 .neo-shadow-hover:hover {
   transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0px #141414;
+  box-shadow: 7px 7px 0px var(--color-brutal-black);
 }
 
 .neo-shadow-active:active {

@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import { useAuth } from '@/lib/auth-context';
 
 const tiers = [
   {
@@ -44,10 +47,10 @@ const tiers = [
       'Unlimited Files',
       'Multi-Bank Parsing',
       'Priority Support',
-      'Custom Categories',
+      'AI Financial Insights',
     ],
     cta: 'Go Premium',
-    ctaHref: '/pricing',
+    ctaHref: '#checkout',
     highlighted: true,
     badge: 'Most Popular',
   },
@@ -73,10 +76,6 @@ const faqs = [
     a: 'We support PDF, CSV, XLSX, and MT940 formats. Our OCR engine is specifically tuned for high-density financial statements with a 99.9% accuracy rate on tabular data.',
   },
   {
-    q: 'Do you provide direct bank API support?',
-    a: 'Yes. Premium users can connect via Plaid or Salt Edge. For enterprise clients, we offer direct SWIFT and ISO 20022 messaging integration.',
-  },
-  {
     q: 'How is my financial data secured?',
     a: 'All data is encrypted with AES-256 at rest and TLS 1.3 in transit. We follow a strict zero-knowledge architecture—we never store your original statement files after processing is complete.',
   },
@@ -86,13 +85,123 @@ const faqs = [
   },
 ];
 
+const COUNTRY_CODES = [
+  { code: 'UG', name: 'Uganda', dial: '+256' },
+  { code: 'KE', name: 'Kenya', dial: '+254' },
+  { code: 'TZ', name: 'Tanzania', dial: '+255' },
+  { code: 'RW', name: 'Rwanda', dial: '+250' },
+  { code: 'NG', name: 'Nigeria', dial: '+234' },
+  { code: 'GH', name: 'Ghana', dial: '+233' },
+  { code: 'ZA', name: 'South Africa', dial: '+27' },
+  { code: 'US', name: 'United States', dial: '+1' },
+  { code: 'GB', name: 'United Kingdom', dial: '+44' },
+];
+
 export default function PricingPage() {
+  return (
+    <Suspense>
+      <PricingContent />
+    </Suspense>
+  );
+}
+
+function PricingContent() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('UG');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'pending' | 'failed'>('idle');
+
+  const { profile, session, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+
+  const isAlreadyPremium = profile?.tier === 'premium' || profile?.tier === 'enterprise';
+
+  // Handle PesaPal callback redirect
+  useEffect(() => {
+    if (searchParams.get('payment') === 'callback') {
+      setPaymentStatus('pending');
+      // Check subscription status
+      if (session?.access_token) {
+        fetch('/api/subscription', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.subscription?.status === 'active') {
+              setPaymentStatus('success');
+            } else {
+              setPaymentStatus('pending');
+            }
+          })
+          .catch(() => setPaymentStatus('pending'));
+      }
+    }
+  }, [searchParams, session]);
+
+  function handlePremiumClick() {
+    if (!profile) {
+      // Not logged in — send to login first
+      window.location.href = '/login';
+      return;
+    }
+    if (isAlreadyPremium) return;
+    setShowCheckout(true);
+  }
+
+  async function handleCheckout(e: React.FormEvent) {
+    e.preventDefault();
+    setCheckoutError('');
+    setCheckoutLoading(true);
+
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session!.access_token}`,
+        },
+        body: JSON.stringify({ phone, countryCode }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to start checkout');
+      }
+
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      } else {
+        throw new Error('No payment URL received');
+      }
+    } catch (err) {
+      setCheckoutError(err instanceof Error ? err.message : 'Checkout failed');
+      setCheckoutLoading(false);
+    }
+  }
 
   return (
     <>
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 pt-[73px]">
+        {/* Payment callback status */}
+        {paymentStatus !== 'idle' && (
+          <div className={`px-6 py-4 text-center font-mono text-sm font-bold border-b-[3px] border-brutal-black ${
+            paymentStatus === 'success'
+              ? 'bg-brutal-green/20 text-brutal-green'
+              : paymentStatus === 'failed'
+                ? 'bg-brutal-pink/20 text-brutal-pink'
+                : 'bg-brutal-yellow/20 text-brutal-black'
+          }`}>
+            {paymentStatus === 'success' && 'Payment successful! Your account has been upgraded to Premium.'}
+            {paymentStatus === 'pending' && 'Payment is being processed. Your account will be upgraded shortly.'}
+            {paymentStatus === 'failed' && 'Payment failed. Please try again or contact support.'}
+          </div>
+        )}
+
         {/* Hero */}
         <section className="px-6 py-20 md:py-28 max-w-7xl mx-auto">
           <span className="font-mono text-xs text-brutal-muted uppercase tracking-[0.2em] mb-6 block">
@@ -123,7 +232,7 @@ export default function PricingPage() {
                 `}
               >
                 {tier.badge && (
-                  <div className="absolute top-4 right-4 bg-brutal-black text-white text-[9px] font-mono font-black px-2 py-1 uppercase tracking-widest rounded-[4px]">
+                  <div className="absolute top-4 right-4 bg-brutal-black text-brutal-white text-[9px] font-mono font-black px-2 py-1 uppercase tracking-widest rounded-[4px]">
                     {tier.badge}
                   </div>
                 )}
@@ -157,21 +266,115 @@ export default function PricingPage() {
                 </ul>
 
                 {/* CTA */}
-                <Link href={tier.ctaHref}>
-                  {tier.highlighted ? (
-                    <button className="w-full bg-brutal-black text-white py-3.5 font-mono font-bold text-sm hover:bg-neutral-800 transition-colors rounded-[4px] cursor-pointer">
-                      {tier.cta}
-                    </button>
-                  ) : (
-                    <button className="w-full border-[3px] border-brutal-black py-3 font-mono font-bold text-sm hover:bg-brutal-black hover:text-white transition-colors rounded-[4px] cursor-pointer">
-                      {tier.cta}
-                    </button>
-                  )}
-                </Link>
+                {tier.ctaHref === '#checkout' ? (
+                  <button
+                    onClick={handlePremiumClick}
+                    disabled={isAlreadyPremium}
+                    className={`w-full py-3.5 font-mono font-bold text-sm rounded-[4px] cursor-pointer transition-colors ${
+                      isAlreadyPremium
+                        ? 'bg-brutal-black/50 text-brutal-white cursor-not-allowed'
+                        : 'bg-brutal-black text-brutal-white hover:opacity-80'
+                    }`}
+                  >
+                    {isAlreadyPremium ? 'Current Plan' : tier.cta}
+                  </button>
+                ) : (
+                  <Link href={tier.ctaHref}>
+                    {tier.highlighted ? (
+                      <button className="w-full bg-brutal-black text-brutal-white py-3.5 font-mono font-bold text-sm hover:opacity-80 transition-colors rounded-[4px] cursor-pointer">
+                        {tier.cta}
+                      </button>
+                    ) : (
+                      <button className="w-full border-[3px] border-brutal-black py-3 font-mono font-bold text-sm hover:bg-brutal-black hover:text-brutal-white transition-colors rounded-[4px] cursor-pointer">
+                        {tier.cta}
+                      </button>
+                    )}
+                  </Link>
+                )}
               </div>
             ))}
           </div>
         </section>
+
+        {/* Checkout Modal */}
+        {showCheckout && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-brutal-black/60" onClick={() => !checkoutLoading && setShowCheckout(false)} />
+
+            {/* Modal */}
+            <div className="relative w-full max-w-[420px] bg-brutal-card border-[3px] border-brutal-black neo-shadow p-8 rounded-[4px] z-10">
+              <button
+                onClick={() => !checkoutLoading && setShowCheckout(false)}
+                className="absolute top-4 right-4 font-mono font-bold text-brutal-muted hover:text-brutal-black transition-colors cursor-pointer"
+              >
+                X
+              </button>
+
+              <div className="flex justify-center mb-6">
+                <div className="w-12 h-12 bg-brutal-yellow border-[3px] border-brutal-black flex items-center justify-center rounded-[4px]">
+                  <span className="font-mono font-black text-xl text-brutal-black">S</span>
+                </div>
+              </div>
+
+              <h2 className="font-mono font-bold text-xl text-center mb-2">Upgrade to Premium</h2>
+              <p className="font-body text-sm text-brutal-muted text-center mb-6">
+                $10/month — Unlimited conversions + AI Insights
+              </p>
+
+              <form onSubmit={handleCheckout} className="flex flex-col gap-4">
+                {/* Country */}
+                <div>
+                  <label className="font-mono text-xs font-bold uppercase tracking-wider text-brutal-muted mb-1.5 block">
+                    Country
+                  </label>
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className="w-full border-[3px] border-brutal-black rounded-[4px] px-3 py-2.5 font-mono text-sm bg-brutal-bg focus:outline-none focus:border-brutal-yellow transition-colors"
+                  >
+                    {COUNTRY_CODES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name} ({c.dial})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Phone */}
+                <Input
+                  label="Phone Number (optional)"
+                  type="tel"
+                  placeholder="e.g. 770123456"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+                <p className="font-body text-[11px] text-brutal-muted -mt-2">
+                  For mobile money payments. Leave blank for card payment.
+                </p>
+
+                {checkoutError && (
+                  <p className="font-mono text-xs text-brutal-pink font-bold">{checkoutError}</p>
+                )}
+
+                <div className="border-t-[3px] border-brutal-black/20 pt-4 mt-2">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="font-mono text-sm text-brutal-muted">Total</span>
+                    <span className="font-mono font-black text-xl">$10.00</span>
+                  </div>
+
+                  <Button type="submit" variant="primary" fullWidth disabled={checkoutLoading}>
+                    {checkoutLoading ? 'Redirecting to payment...' : 'Pay with PesaPal'}
+                  </Button>
+                </div>
+
+                <p className="font-body text-[11px] text-brutal-muted text-center">
+                  You&apos;ll be redirected to PesaPal to complete payment securely via card, mobile money, or bank transfer.
+                </p>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* FAQ */}
         <section className="border-t-[3px] border-brutal-black bg-brutal-card">
@@ -222,7 +425,7 @@ export default function PricingPage() {
           </h2>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/convert">
-              <Button variant="primary" size="lg" className="bg-brutal-black !text-white hover:!bg-neutral-800 border-brutal-black">
+              <Button variant="primary" size="lg" className="bg-brutal-black !text-brutal-white hover:!opacity-80 border-brutal-black">
                 Launch Dashboard
               </Button>
             </Link>

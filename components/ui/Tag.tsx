@@ -13,8 +13,8 @@ const colorStyles: Record<TagColor, string> = {
   cyan: 'bg-brutal-cyan text-brutal-black',
   pink: 'bg-brutal-pink text-brutal-black',
   green: 'bg-brutal-green text-brutal-black',
-  gray: 'bg-neutral-200 text-brutal-black',
-  black: 'bg-brutal-black text-white',
+  gray: 'bg-brutal-surface text-brutal-black',
+  black: 'bg-brutal-black text-brutal-white',
 };
 
 export default function Tag({ children, color = 'gray', className = '' }: TagProps) {

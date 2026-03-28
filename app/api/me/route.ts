@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { getEffectiveTier } from '@/lib/tiers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,8 +27,12 @@ export async function GET(request: NextRequest) {
       .eq('status', 'active')
       .single();
 
+    // Apply admin override
+    const effectiveTier = getEffectiveTier(profile?.tier || 'free', user.email);
+    const effectiveProfile = profile ? { ...profile, tier: effectiveTier } : profile;
+
     return NextResponse.json({
-      profile,
+      profile: effectiveProfile,
       subscription: subscription || null,
     });
   } catch (error: unknown) {

@@ -1,68 +1,54 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
-import Label from '@/components/ui/Label';
 import { formatBytes } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
+import InsightsPanel from '@/components/insights/InsightsPanel';
 import type { ExportFormat } from '@/lib/tiers';
-import type { Transaction, InsightsResponse } from '@/types';
-
-// Dummy data for development
-const DUMMY_TRANSACTIONS: Transaction[] = [
-  { date: '2026-02-03', description: 'Airtime MTN 5000', debit: 5000, credit: '', balance: 1245000 },
-  { date: '2026-02-03', description: 'SafeBoda Ride', debit: 8000, credit: '', balance: 1237000 },
-  { date: '2026-02-04', description: 'Received from Jane Apio', debit: '', credit: 250000, balance: 1487000 },
-  { date: '2026-02-05', description: 'UMEME Electricity', debit: 45000, credit: '', balance: 1442000 },
-  { date: '2026-02-05', description: 'Market — Owino', debit: 32000, credit: '', balance: 1410000 },
-  { date: '2026-02-06', description: 'M-Pesa to 0772XXXXXX', debit: 100000, credit: '', balance: 1310000 },
-  { date: '2026-02-07', description: 'Salary — Kampala Ltd', debit: '', credit: 850000, balance: 2160000 },
-  { date: '2026-02-08', description: 'School Fees St. Mary\'s Kisubi', debit: 500000, credit: '', balance: 1660000 },
-];
-
-const DUMMY_INSIGHTS: InsightsResponse = {
-  spendingBreakdown: [
-    { category: 'Airtime & Data', amount: 145000, percentage: 24, currency: 'UGX' },
-    { category: 'Transport (Boda)', amount: 98000, percentage: 16, currency: 'UGX' },
-    { category: 'Food & Market', amount: 187000, percentage: 31, currency: 'UGX' },
-    { category: 'Bills & Utilities', amount: 76000, percentage: 13, currency: 'UGX' },
-    { category: 'Transfers Out', amount: 54000, percentage: 9, currency: 'UGX' },
-    { category: 'Other', amount: 42000, percentage: 7, currency: 'UGX' },
-  ],
-  monthlySummary: {
-    totalIncome: 850000, totalExpenses: 602000, savingsRate: 29.2, currency: 'UGX', period: 'Feb 2026',
-  },
-  habitInsights: [
-    'You spend 24% on airtime — mostly evenings and weekends. A weekly cap of UGX 30,000 could save you UGX 25,000/month.',
-    'Your food spending is consistent and well-managed. Nice budgeting.',
-    'You retain about 29% of income. Automating UGX 50,000/month into a SACCO would compound fast.',
-  ],
-  transactionCount: 48,
-  periodCovered: 'Feb 1 to Feb 28, 2026',
-};
+import type { InsightsResponse } from '@/lib/claude';
 
 type ConvertStep = 'idle' | 'uploading' | 'extracting' | 'converting' | 'done' | 'error';
 
-const barColors = ['bg-brutal-yellow', 'bg-brutal-cyan', 'bg-brutal-pink', 'bg-brutal-green', 'bg-purple-400', 'bg-orange-400'];
-
 export default function ConvertPage() {
+  const { user, session, profile } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [format, setFormat] = useState<ExportFormat>('csv');
   const [step, setStep] = useState<ConvertStep>('idle');
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [tableHeaders, setTableHeaders] = useState<string[]>([]);
+  const [tableRows, setTableRows] = useState<string[][]>([]);
   const [insights, setInsights] = useState<InsightsResponse | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [pdfPassword, setPdfPassword] = useState('');
   const [showPasswordField, setShowPasswordField] = useState(false);
+  const [usageLeft, setUsageLeft] = useState<number | null>(null);
 
-  // TODO: Replace with real usage from API
-  const usageLeft = 2;
-  const isLoggedIn = false;
-  const isPremium = false;
+  const isLoggedIn = !!user;
+  const isPremium = profile?.tier === 'premium' || profile?.tier === 'enterprise';
+
+  useEffect(() => {
+    async function fetchUsage() {
+      try {
+        const headers: Record<string, string> = {};
+        if (session?.access_token) {
+          headers.Authorization = `Bearer ${session.access_token}`;
+        }
+        const res = await fetch('/api/usage', { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setUsageLeft(data.remaining === Infinity ? null : data.remaining);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    fetchUsage();
+  }, [session]);
 
   const handleFile = useCallback((f: File) => {
     const validExts = ['.pdf', '.png', '.jpg', '.jpeg', '.csv'];
@@ -74,7 +60,8 @@ export default function ConvertPage() {
     setFile(f);
     setErrorMsg('');
     setStep('idle');
-    setTransactions([]);
+    setTableHeaders([]);
+    setTableRows([]);
     setInsights(null);
   }, []);
 
@@ -89,39 +76,119 @@ export default function ConvertPage() {
     setErrorMsg('');
 
     try {
-      // Step 1: Uploading
       setStep('uploading');
-      await new Promise((r) => setTimeout(r, 1200));
 
-      // Step 2: Extracting
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('format', format);
+      if (pdfPassword) {
+        formData.append('password', pdfPassword);
+      }
+
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
       setStep('extracting');
-      await new Promise((r) => setTimeout(r, 1800));
 
-      // Step 3: Converting
+      const res = await fetch('/api/convert', {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
       setStep('converting');
-      await new Promise((r) => setTimeout(r, 1000));
 
-      // TODO: Replace with real API call
-      setTransactions(DUMMY_TRANSACTIONS);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Conversion failed');
+      }
+
+      const data = await res.json();
+      setTableHeaders(data.headers || []);
+      setTableRows(data.rawRows || []);
       setStep('done');
-    } catch {
-      setErrorMsg('Something went wrong. Please try again.');
+
+      // Refresh usage count
+      const usageRes = await fetch('/api/usage', { headers });
+      if (usageRes.ok) {
+        const usageData = await usageRes.json();
+        setUsageLeft(usageData.remaining === Infinity ? null : usageData.remaining);
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
       setStep('error');
     }
   }
 
   async function handleGetInsights() {
+    if (!session?.access_token) return;
     setInsightsLoading(true);
-    await new Promise((r) => setTimeout(r, 2000));
-    // TODO: Replace with real API call
-    setInsights(DUMMY_INSIGHTS);
-    setInsightsLoading(false);
+
+    try {
+      const res = await fetch('/api/insights', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ headers: tableHeaders, transactions: tableRows }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to get insights');
+      }
+
+      const data = await res.json();
+      setInsights(data);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to get insights');
+    } finally {
+      setInsightsLoading(false);
+    }
+  }
+
+  function handleDownload() {
+    if (tableRows.length === 0) return;
+
+    let content: string;
+    let mimeType: string;
+    let ext: string;
+
+    if (format === 'json') {
+      const data = tableRows.map(row => {
+        const obj: Record<string, string> = {};
+        tableHeaders.forEach((h, i) => { obj[h] = row[i] ?? ''; });
+        return obj;
+      });
+      content = JSON.stringify(data, null, 2);
+      mimeType = 'application/json';
+      ext = 'json';
+    } else {
+      const csvEscape = (v: string) => v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v;
+      const rows = tableRows.map(row => row.map(csvEscape).join(','));
+      content = [tableHeaders.map(csvEscape).join(','), ...rows].join('\n');
+      mimeType = 'text/csv';
+      ext = 'csv';
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const baseName = file?.name.replace(/\.[^/.]+$/, '') || 'transactions';
+    a.download = `${baseName}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function handleReset() {
     setFile(null);
     setStep('idle');
-    setTransactions([]);
+    setTableHeaders([]);
+    setTableRows([]);
     setInsights(null);
     setErrorMsg('');
   }
@@ -138,16 +205,16 @@ export default function ConvertPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1 px-6 py-8 max-w-4xl mx-auto w-full">
+      <main className="flex-1 pt-[73px] px-6 py-8 max-w-4xl mx-auto w-full">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <h1 className="font-mono font-black text-3xl md:text-4xl tracking-tighter">Convert Statement</h1>
           <div className="font-mono text-sm">
             {isLoggedIn ? (
-              <Tag color="gray">{usageLeft} left today</Tag>
+              <Tag color="gray">{usageLeft === null ? 'Unlimited' : `${usageLeft} left today`}</Tag>
             ) : (
               <span className="text-brutal-muted">
-                {usageLeft} left today &middot;{' '}
+                {usageLeft !== null ? `${usageLeft} left today` : ''} &middot;{' '}
                 <a href="/signup" className="font-bold text-brutal-black hover:text-brutal-yellow transition-colors">
                   Sign up &rarr; 5/day free
                 </a>
@@ -239,7 +306,7 @@ export default function ConvertPage() {
               <span className="text-5xl mb-4">✅</span>
               <p className="font-mono font-bold text-lg mb-2">Conversion complete!</p>
               <p className="font-body text-sm text-brutal-muted">
-                {transactions.length} transactions extracted
+                {tableRows.length} transactions extracted
               </p>
             </>
           )}
@@ -304,11 +371,11 @@ export default function ConvertPage() {
         )}
 
         {/* Results */}
-        {step === 'done' && transactions.length > 0 && (
+        {step === 'done' && tableRows.length > 0 && (
           <div className="space-y-6">
             {/* Stats tags */}
             <div className="flex flex-wrap gap-3">
-              <Tag color="yellow">{transactions.length} Transactions</Tag>
+              <Tag color="yellow">{tableRows.length} Transactions</Tag>
               <Tag color="cyan">{format.toUpperCase()}</Tag>
               <Tag color="gray">{file?.name}</Tag>
             </div>
@@ -318,21 +385,21 @@ export default function ConvertPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b-[3px] border-brutal-black bg-neutral-50">
-                    <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider">Date</th>
-                    <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider">Description</th>
-                    <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider text-right">Debit</th>
-                    <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider text-right">Credit</th>
-                    <th className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider text-right">Balance</th>
+                    {tableHeaders.map((h) => (
+                      <th key={h} className="px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="font-mono text-xs">
-                  {transactions.slice(0, 10).map((t, i) => (
+                  {tableRows.slice(0, 10).map((row, i) => (
                     <tr key={i} className="border-b border-neutral-200 last:border-0">
-                      <td className="px-4 py-2.5 whitespace-nowrap">{t.date}</td>
-                      <td className="px-4 py-2.5">{t.description}</td>
-                      <td className="px-4 py-2.5 text-right text-brutal-pink">{t.debit || '—'}</td>
-                      <td className="px-4 py-2.5 text-right text-brutal-green">{t.credit || '—'}</td>
-                      <td className="px-4 py-2.5 text-right">{t.balance?.toLocaleString()}</td>
+                      {row.map((cell, j) => (
+                        <td key={j} className="px-4 py-2.5 whitespace-nowrap">
+                          {cell || '—'}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
@@ -340,93 +407,18 @@ export default function ConvertPage() {
             </div>
 
             {/* Download button */}
-            <Button variant="cyan" size="lg" fullWidth>
+            <Button variant="cyan" size="lg" fullWidth onClick={handleDownload}>
               DOWNLOAD {format.toUpperCase()} ↓
             </Button>
 
             {/* AI Insights */}
-            {isPremium ? (
-              !insights ? (
-                <Button
-                  variant="green"
-                  size="lg"
-                  fullWidth
-                  onClick={handleGetInsights}
-                  disabled={insightsLoading}
-                >
-                  {insightsLoading ? 'Analyzing...' : 'GET AI INSIGHTS →'}
-                </Button>
-              ) : (
-                <div className="space-y-6">
-                  {/* Spending Breakdown */}
-                  <div className="bg-brutal-card border-[3px] border-brutal-black p-6 rounded-[4px]">
-                    <Label>Spending Breakdown</Label>
-                    <div className="mt-4 space-y-3">
-                      {insights.spendingBreakdown.map((cat, i) => (
-                        <div key={cat.category}>
-                          <div className="flex justify-between mb-1">
-                            <span className="font-mono text-xs font-bold">{cat.category}</span>
-                            <span className="font-mono text-xs text-brutal-muted">
-                              {cat.currency} {cat.amount.toLocaleString()} ({cat.percentage}%)
-                            </span>
-                          </div>
-                          <div className="w-full h-4 bg-neutral-100 border border-brutal-black rounded-[2px] overflow-hidden">
-                            <div
-                              className={`h-full ${barColors[i % barColors.length]}`}
-                              style={{ width: `${cat.percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Monthly Summary */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-brutal-green/10 border-[3px] border-brutal-black p-4 rounded-[4px] text-center">
-                      <Label className="text-brutal-green">Income</Label>
-                      <p className="font-mono font-black text-2xl mt-2">
-                        {insights.monthlySummary.currency} {insights.monthlySummary.totalIncome.toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="bg-brutal-pink/10 border-[3px] border-brutal-black p-4 rounded-[4px] text-center">
-                      <Label className="text-brutal-pink">Expenses</Label>
-                      <p className="font-mono font-black text-2xl mt-2">
-                        {insights.monthlySummary.currency} {insights.monthlySummary.totalExpenses.toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="bg-brutal-cyan/10 border-[3px] border-brutal-black p-4 rounded-[4px] text-center">
-                      <Label className="text-brutal-cyan">Savings Rate</Label>
-                      <p className="font-mono font-black text-2xl mt-2">
-                        {insights.monthlySummary.savingsRate}%
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Habit Insights */}
-                  <div className="bg-brutal-card border-[3px] border-brutal-black p-6 rounded-[4px]">
-                    <Label>Habit Insights</Label>
-                    <div className="mt-4 space-y-3">
-                      {insights.habitInsights.map((tip, i) => (
-                        <div key={i} className="flex gap-3 items-start">
-                          <span className="text-brutal-green font-mono font-bold text-sm mt-0.5">💡</span>
-                          <p className="font-body text-sm text-brutal-black leading-relaxed">{tip}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )
-            ) : (
-              <div className="border-[3px] border-dashed border-brutal-muted p-6 rounded-[4px] text-center">
-                <p className="font-mono text-sm text-brutal-muted mb-2">
-                  🔒 AI Spending Insights — <span className="font-bold">Premium</span>
-                </p>
-                <a href="/pricing" className="font-mono text-xs font-bold text-brutal-yellow hover:underline">
-                  Upgrade to unlock →
-                </a>
-              </div>
-            )}
+            <InsightsPanel
+              insights={insights}
+              isLocked={!isPremium}
+              isLoading={insightsLoading}
+              onGenerate={handleGetInsights}
+              onUpgrade={() => { window.location.href = '/pricing'; }}
+            />
 
             {/* New conversion */}
             <div className="text-center">
