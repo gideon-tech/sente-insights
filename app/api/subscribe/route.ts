@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
 
     const result = await submitOrder({
       id: merchantRef,
-      amount: 10,
-      currency: 'USD',
+      amount: 500,
+      currency: 'KES',
       description: 'Sente Insights Premium — 1 month',
       callbackUrl,
       notificationId: PESAPAL_IPN_ID,
@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
       status: 'pending',
       pesapal_order_tracking_id: result.order_tracking_id,
       pesapal_merchant_reference: result.merchant_reference,
-      amount: 10,
-      currency: 'USD',
+      amount: 500,
+      currency: 'KES',
     });
 
     return NextResponse.json({
