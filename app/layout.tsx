@@ -15,9 +15,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'SENTE INSIGHTS | Financial Intelligence for East Africa',
-  description: 'Upload your bank or mobile money statement. Get clean, structured data back in seconds. Built for East Africa.',
-  keywords: ['bank statement', 'mobile money', 'M-Pesa', 'MTN MoMo', 'Airtel Money', 'East Africa', 'fintech'],
+  title: 'SENTE INSIGHTS | Know Where Your Money Goes',
+  description: 'Upload any bank or mobile money statement. Get structured data and AI-powered spending insights in seconds.',
+  keywords: ['bank statement', 'mobile money', 'M-Pesa', 'MTN MoMo', 'Airtel Money', 'spending insights', 'fintech'],
 };
 
 export default function RootLayout({

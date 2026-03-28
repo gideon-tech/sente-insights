@@ -205,16 +205,13 @@ function PricingContent() {
         {/* Hero */}
         <section className="px-6 py-20 md:py-28 max-w-7xl mx-auto">
           <span className="font-mono text-xs text-brutal-muted uppercase tracking-[0.2em] mb-6 block">
-            System Architecture / v2.4
+            Simple & Transparent
           </span>
           <h1 className="font-mono font-black text-5xl md:text-7xl lg:text-8xl tracking-tighter leading-[0.95] mb-6 max-w-4xl">
-            Transparent<br />Pricing Models.
+            Pick a Plan.<br />Start Converting.
           </h1>
           <p className="font-body text-lg md:text-xl text-brutal-muted max-w-2xl mb-2">
-            Enterprise-grade financial data extraction without the SaaS fluff.
-          </p>
-          <p className="font-mono text-sm text-brutal-muted">
-            Choose your tier of computational rigor.
+            Free to start. Upgrade when you need AI insights and unlimited conversions.
           </p>
         </section>
 
@@ -383,10 +380,10 @@ function PricingContent() {
               {/* Left — Title */}
               <div>
                 <span className="font-mono text-xs text-brutal-muted uppercase tracking-[0.2em] mb-6 block">
-                  Technical Specifications.
+                  Common Questions
                 </span>
                 <h2 className="font-mono font-black text-4xl md:text-5xl tracking-tighter leading-[1.1] mb-4">
-                  Frequently Asked<br />Questions Regarding<br />Structural Data<br />Integrity.
+                  Frequently<br />Asked<br />Questions.
                 </h2>
               </div>
 
@@ -421,17 +418,17 @@ function PricingContent() {
         {/* CTA */}
         <section className="bg-brutal-yellow border-t-[3px] border-brutal-black py-20 md:py-28 px-6 text-center">
           <h2 className="font-mono font-black text-4xl md:text-6xl tracking-tighter mb-10">
-            Ready to automate<br />your ledger?
+            Start understanding<br />your spending today.
           </h2>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/convert">
               <Button variant="primary" size="lg" className="bg-brutal-black !text-brutal-white hover:!opacity-80 border-brutal-black">
-                Launch Dashboard
+                Convert Your First Statement
               </Button>
             </Link>
             <Link href="/about">
               <Button variant="outline" size="lg" className="!bg-transparent border-brutal-black">
-                View Documentation
+                Learn More
               </Button>
             </Link>
           </div>

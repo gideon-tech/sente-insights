@@ -20,10 +20,10 @@ export default function LandingPage() {
         {/* CTA Section */}
         <section className="bg-brutal-yellow border-y-[3px] border-brutal-black py-20 px-6 text-center">
           <h2 className="font-mono font-black text-4xl md:text-7xl mb-8 tracking-tighter uppercase">
-            Ready to structuralize?
+            Take Control of Your Spending.
           </h2>
           <p className="font-body text-xl md:text-2xl mb-12 text-brutal-black font-medium max-w-2xl mx-auto">
-            Join 5,000+ businesses automating their financial workflows across East Africa.
+            Upload your statement. See where every shilling goes. Start making smarter money decisions today.
           </p>
           <a href="/convert">
             <button className="bg-brutal-black text-brutal-white px-12 py-6 border-[3px] border-brutal-black font-mono font-black text-2xl neo-shadow transition-transform hover:-translate-x-1 hover:-translate-y-1 rounded-[4px] cursor-pointer">
