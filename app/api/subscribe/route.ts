@@ -28,15 +28,19 @@ export async function POST(request: NextRequest) {
 
     const { phone, countryCode = 'UG' } = await request.json();
 
+    if (!PESAPAL_IPN_ID) {
+      return NextResponse.json({ error: 'Payment system not configured (missing IPN ID)' }, { status: 500 });
+    }
+
     const merchantRef = `sente_${user.id}_${Date.now()}`;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const callbackUrl = 'https://sente-insights-two.vercel.app/pricing?payment=callback';
 
     const result = await submitOrder({
       id: merchantRef,
       amount: 10,
       currency: 'USD',
       description: 'Sente Insights Premium — 1 month',
-      callbackUrl: `${appUrl}/pricing?payment=callback`,
+      callbackUrl,
       notificationId: PESAPAL_IPN_ID,
       billing: {
         email: profile.email,
@@ -46,6 +50,11 @@ export async function POST(request: NextRequest) {
         lastName: profile.full_name?.split(' ').slice(1).join(' ') || '',
       },
     });
+
+    if (!result.redirect_url) {
+      console.error('PesaPal response missing redirect_url:', JSON.stringify(result));
+      return NextResponse.json({ error: 'Payment gateway did not return a redirect URL', details: result }, { status: 502 });
+    }
 
     // Save pending subscription
     await supabaseAdmin.from('subscriptions').insert({

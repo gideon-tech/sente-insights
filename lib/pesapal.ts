@@ -69,8 +69,12 @@ export async function submitOrder(order: {
     }),
   });
 
-  if (!res.ok) throw new Error(`Pesapal order submission failed: ${res.status}`);
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    console.error('PesaPal order error:', JSON.stringify(data));
+    throw new Error(`Pesapal order submission failed: ${res.status} — ${data.error?.message || JSON.stringify(data)}`);
+  }
+  return data;
 }
 
 export async function getTransactionStatus(orderTrackingId: string) {
