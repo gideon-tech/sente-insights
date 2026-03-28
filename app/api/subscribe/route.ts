@@ -51,8 +51,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    console.log('PesaPal SubmitOrderRequest full response:', JSON.stringify(result, null, 2));
+
     if (!result.redirect_url) {
-      console.error('PesaPal response missing redirect_url:', JSON.stringify(result));
       return NextResponse.json({ error: 'Payment gateway did not return a redirect URL', details: result }, { status: 502 });
     }
 
