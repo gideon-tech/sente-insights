@@ -4,19 +4,18 @@ import { registerIPN } from '@/lib/pesapal';
 /**
  * One-time utility to register the IPN URL with PesaPal.
  * Call this once, then save the returned ipn_id to PESAPAL_IPN_ID env var.
- * Protected by a simple secret check so only you can call it.
+ *
+ * curl -X POST https://sente-insights-two.vercel.app/api/pesapal/register-ipn \
+ *   -H "Content-Type: application/json" \
+ *   -d '{"ipnUrl": "https://sente-insights-two.vercel.app/api/webhooks/pesapal"}'
  */
 export async function POST(request: NextRequest) {
   try {
-    const { secret } = await request.json();
+    const { ipnUrl } = await request.json();
 
-    // Simple protection — use your Supabase service key as the secret
-    if (secret !== process.env.SUPABASE_SERVICE_KEY) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!ipnUrl) {
+      return NextResponse.json({ error: 'Missing ipnUrl in request body' }, { status: 400 });
     }
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const ipnUrl = `${appUrl}/api/webhooks/pesapal`;
 
     const result = await registerIPN(ipnUrl);
 
