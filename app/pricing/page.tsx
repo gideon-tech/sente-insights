@@ -41,7 +41,7 @@ const tiers = [
   {
     label: 'Professional',
     name: 'Premium',
-    price: '$10',
+    price: 'UGX 500',
     period: '/monthly',
     features: [
       'Unlimited Files',
@@ -310,7 +310,7 @@ function PricingContent() {
 
               <h2 className="font-mono font-bold text-xl text-center mb-2">Upgrade to Premium</h2>
               <p className="font-body text-sm text-brutal-muted text-center mb-6">
-                $10/month — Unlimited conversions + AI Insights
+                UGX 500/month — Unlimited conversions + AI Insights
               </p>
 
               <form onSubmit={handleCheckout} className="flex flex-col gap-4">
@@ -351,7 +351,7 @@ function PricingContent() {
                 <div className="border-t-[3px] border-brutal-black/20 pt-4 mt-2">
                   <div className="flex justify-between items-center mb-4">
                     <span className="font-mono text-sm text-brutal-muted">Total</span>
-                    <span className="font-mono font-black text-xl">$10.00</span>
+                    <span className="font-mono font-black text-xl">UGX 500</span>
                   </div>
 
                   <Button type="submit" variant="primary" fullWidth disabled={checkoutLoading}>
