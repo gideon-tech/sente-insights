@@ -7,7 +7,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, useClerk } from '@clerk/nextjs';
 import { useProfile } from '@/lib/use-profile';
 
 const tiers = [
@@ -116,6 +116,7 @@ function PricingContent() {
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'pending' | 'failed'>('idle');
 
   const { isSignedIn, getToken } = useAuth();
+  const clerk = useClerk();
   const { profile } = useProfile();
   const searchParams = useSearchParams();
 
@@ -144,7 +145,7 @@ function PricingContent() {
 
   function handlePremiumClick() {
     if (!isSignedIn) {
-      // Not logged in — Clerk modal will handle this via SignInButton in navbar
+      clerk.openSignIn({ redirectUrl: '/pricing' });
       return;
     }
     setShowCheckout(true);

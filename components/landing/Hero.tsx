@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SignUpButton } from '@clerk/nextjs';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
 
@@ -8,8 +9,8 @@ export default function Hero() {
       <span className="bg-brutal-yellow text-brutal-black font-mono font-bold px-4 py-1 text-xs md:text-sm border-[2px] border-brutal-black mb-6 tracking-tight rounded-[4px]">
         AI-POWERED FINANCIAL INSIGHTS
       </span>
-      <h1 className="font-mono font-black text-5xl md:text-8xl lg:text-9xl text-brutal-black leading-[0.9] tracking-tighter mb-8">
-        Know Where Your<br />Money Goes.
+      <h1 className="font-mono font-black text-4xl md:text-8xl lg:text-9xl text-brutal-black leading-[0.9] tracking-tighter mb-8">
+        Know Where Your<br />Money Goes
       </h1>
       <p className="font-body text-lg md:text-2xl text-brutal-muted max-w-2xl leading-relaxed mb-8">
         Upload any bank or mobile money statement. Get structured data and AI spending insights in seconds.
@@ -28,11 +29,11 @@ export default function Hero() {
             Convert Free &mdash; No Signup &rarr;
           </Button>
         </Link>
-        <Link href="/signup">
+        <SignUpButton mode="modal">
           <Button variant="secondary" size="lg">
             Create Account
           </Button>
-        </Link>
+        </SignUpButton>
       </div>
     </section>
   );

@@ -23,7 +23,7 @@ export default function Navbar() {
   return (
     <nav className="bg-brutal-bg border-b-[3px] border-brutal-black fixed top-0 w-full z-50">
       <div className="flex justify-between items-center w-full px-6 py-4 max-w-full mx-auto">
-        <Link href="/" className="text-2xl font-black tracking-tighter text-brutal-black font-mono uppercase">
+        <Link href="/" className="text-lg sm:text-2xl font-black tracking-tighter text-brutal-black font-mono uppercase whitespace-nowrap">
           SENTE INSIGHTS
         </Link>
         <div className="hidden md:flex items-center gap-8">
