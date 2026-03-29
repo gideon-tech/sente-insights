@@ -145,7 +145,7 @@ function PricingContent() {
 
   function handlePremiumClick() {
     if (!isSignedIn) {
-      clerk.openSignIn({ redirectUrl: '/pricing' });
+      clerk.openSignIn({ afterSignInUrl: '/pricing' });
       return;
     }
     setShowCheckout(true);
