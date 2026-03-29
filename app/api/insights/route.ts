@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { preProcess } from '@/lib/insights-preprocessor';
 import { generateInsights } from '@/lib/claude';
@@ -6,24 +7,22 @@ import { getEffectiveTier } from '@/lib/tiers';
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+    const clerkUser = await currentUser();
+    const email = clerkUser?.emailAddresses?.[0]?.emailAddress || '';
 
     // Check tier
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('tier')
-      .eq('id', user.id)
+      .eq('clerk_id', userId)
       .single();
 
-    const effectiveTier = getEffectiveTier(profile?.tier || 'free', user.email);
+    const effectiveTier = getEffectiveTier(profile?.tier || 'free', email);
     if (!['premium', 'enterprise'].includes(effectiveTier)) {
       return NextResponse.json({ error: 'Premium subscription required' }, { status: 403 });
     }
@@ -44,7 +43,7 @@ export async function POST(request: NextRequest) {
     if (conversionId) {
       await supabaseAdmin.from('insights').insert({
         conversion_id: conversionId,
-        user_id: user.id,
+        user_id: userId,
         spending_breakdown: insights.spendingBreakdown,
         monthly_summary: insights.monthlySummary,
         habit_insights: insights.habitCoaching,

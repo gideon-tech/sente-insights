@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Space_Mono, Inter } from 'next/font/google';
-import { AuthProvider } from '@/lib/auth-context';
+import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 
 const spaceMono = Space_Mono({
@@ -26,16 +26,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${spaceMono.variable} ${inter.variable}`}>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})();`,
-          }}
-        />
-      </head>
+    <html lang="en" className={`${spaceMono.variable} ${inter.variable}`}>
       <body className="min-h-screen flex flex-col bg-brutal-bg text-brutal-black font-body antialiased">
-        <AuthProvider>{children}</AuthProvider>
+        <ClerkProvider>{children}</ClerkProvider>
       </body>
     </html>
   );

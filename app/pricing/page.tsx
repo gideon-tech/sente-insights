@@ -7,7 +7,8 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth } from '@clerk/nextjs';
+import { useProfile } from '@/lib/use-profile';
 
 const tiers = [
   {
@@ -36,7 +37,7 @@ const tiers = [
       'Custom Categories',
     ],
     cta: 'Sign Up',
-    ctaHref: '/signup',
+    ctaHref: '/convert',
   },
   {
     label: 'Professional',
@@ -114,19 +115,19 @@ function PricingContent() {
   const [checkoutError, setCheckoutError] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'pending' | 'failed'>('idle');
 
-  const { profile, session, loading: authLoading } = useAuth();
+  const { isSignedIn, getToken } = useAuth();
+  const { profile } = useProfile();
   const searchParams = useSearchParams();
 
   const isAlreadyPremium = profile?.tier === 'premium' || profile?.tier === 'enterprise';
 
   // Handle PesaPal callback redirect
   useEffect(() => {
-    if (searchParams.get('payment') === 'callback') {
+    if (searchParams.get('payment') === 'callback' && isSignedIn) {
       setPaymentStatus('pending');
-      // Check subscription status
-      if (session?.access_token) {
+      getToken().then((token) => {
         fetch('/api/subscription', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
           .then((res) => res.json())
           .then((data) => {
@@ -137,14 +138,13 @@ function PricingContent() {
             }
           })
           .catch(() => setPaymentStatus('pending'));
-      }
+      });
     }
-  }, [searchParams, session]);
+  }, [searchParams, isSignedIn, getToken]);
 
   function handlePremiumClick() {
-    if (!profile) {
-      // Not logged in — send to login first
-      window.location.href = '/login';
+    if (!isSignedIn) {
+      // Not logged in — Clerk modal will handle this via SignInButton in navbar
       return;
     }
     setShowCheckout(true);
@@ -156,11 +156,12 @@ function PricingContent() {
     setCheckoutLoading(true);
 
     try {
+      const token = await getToken();
       const res = await fetch('/api/subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session!.access_token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ phone, countryCode }),
       });

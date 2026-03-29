@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { submitOrder } from '@/lib/pesapal';
 
@@ -6,25 +7,20 @@ const PESAPAL_IPN_ID = process.env.PESAPAL_IPN_ID || '';
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+    const clerkUser = await currentUser();
+    const email = clerkUser?.emailAddresses?.[0]?.emailAddress || '';
+    const fullName = clerkUser?.fullName || '';
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('clerk_id', userId)
       .single();
-
-    if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
 
     const { phone, countryCode = 'UG' } = await request.json();
 
@@ -32,7 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment system not configured (missing IPN ID)' }, { status: 500 });
     }
 
-    const merchantRef = `sente_${user.id}_${Date.now()}`;
+    const merchantRef = `sente_${userId}_${Date.now()}`;
     const callbackUrl = 'https://sente-insights-two.vercel.app/pricing?payment=callback';
 
     const result = await submitOrder({
@@ -43,11 +39,11 @@ export async function POST(request: NextRequest) {
       callbackUrl,
       notificationId: PESAPAL_IPN_ID,
       billing: {
-        email: profile.email,
+        email: profile?.email || email,
         phone: phone || '',
         countryCode,
-        firstName: profile.full_name?.split(' ')[0] || '',
-        lastName: profile.full_name?.split(' ').slice(1).join(' ') || '',
+        firstName: profile?.full_name?.split(' ')[0] || fullName.split(' ')[0] || '',
+        lastName: profile?.full_name?.split(' ').slice(1).join(' ') || fullName.split(' ').slice(1).join(' ') || '',
       },
     });
 
@@ -59,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Save pending subscription
     await supabaseAdmin.from('subscriptions').insert({
-      user_id: user.id,
+      user_id: userId,
       plan: 'premium',
       status: 'pending',
       pesapal_order_tracking_id: result.order_tracking_id,

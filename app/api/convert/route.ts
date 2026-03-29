@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { uploadAndConvert, waitUntilComplete } from '@/lib/bsc';
 import { TIER_CONFIG, getEffectiveTier } from '@/lib/tiers';
@@ -17,22 +18,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine user or session
-    const authHeader = request.headers.get('authorization');
-    let userId: string | null = null;
+    const { userId } = await auth();
     let sessionId: string | null = null;
-    let tier = 'anonymous';
+    let tier: string = 'anonymous';
 
-    if (authHeader) {
-      const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
-      if (user) {
-        userId = user.id;
-        const { data: profile } = await supabaseAdmin
-          .from('profiles')
-          .select('tier')
-          .eq('id', userId)
-          .single();
-        tier = getEffectiveTier((profile?.tier || 'free') as Tier, user.email);
-      }
+    if (userId) {
+      const clerkUser = await currentUser();
+      const email = clerkUser?.emailAddresses?.[0]?.emailAddress || '';
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('tier')
+        .eq('clerk_id', userId)
+        .single();
+      tier = getEffectiveTier((profile?.tier || 'free') as Tier, email);
     }
 
     if (!userId) {

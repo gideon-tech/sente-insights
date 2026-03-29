@@ -6,7 +6,8 @@ import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
 import { formatBytes } from '@/lib/utils';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth } from '@clerk/nextjs';
+import { useProfile } from '@/lib/use-profile';
 import InsightsPanel from '@/components/insights/InsightsPanel';
 import type { ExportFormat } from '@/lib/tiers';
 import type { InsightsResponse } from '@/lib/claude';
@@ -14,7 +15,8 @@ import type { InsightsResponse } from '@/lib/claude';
 type ConvertStep = 'idle' | 'uploading' | 'extracting' | 'converting' | 'done' | 'error';
 
 export default function ConvertPage() {
-  const { user, session, profile } = useAuth();
+  const { isSignedIn, getToken } = useAuth();
+  const { profile } = useProfile();
   const [file, setFile] = useState<File | null>(null);
   const [format, setFormat] = useState<ExportFormat>('csv');
   const [step, setStep] = useState<ConvertStep>('idle');
@@ -28,15 +30,16 @@ export default function ConvertPage() {
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [usageLeft, setUsageLeft] = useState<number | null>(null);
 
-  const isLoggedIn = !!user;
+  const isLoggedIn = !!isSignedIn;
   const isPremium = profile?.tier === 'premium' || profile?.tier === 'enterprise';
 
   useEffect(() => {
     async function fetchUsage() {
       try {
         const headers: Record<string, string> = {};
-        if (session?.access_token) {
-          headers.Authorization = `Bearer ${session.access_token}`;
+        if (isSignedIn) {
+          const token = await getToken();
+          if (token) headers.Authorization = `Bearer ${token}`;
         }
         const res = await fetch('/api/usage', { headers });
         if (res.ok) {
@@ -48,7 +51,7 @@ export default function ConvertPage() {
       }
     }
     fetchUsage();
-  }, [session]);
+  }, [isSignedIn, getToken]);
 
   const handleFile = useCallback((f: File) => {
     const validExts = ['.pdf', '.png', '.jpg', '.jpeg', '.csv'];
@@ -86,8 +89,9 @@ export default function ConvertPage() {
       }
 
       const headers: Record<string, string> = {};
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
+      if (isSignedIn) {
+        const token = await getToken();
+        if (token) headers.Authorization = `Bearer ${token}`;
       }
 
       setStep('extracting');
@@ -123,15 +127,16 @@ export default function ConvertPage() {
   }
 
   async function handleGetInsights() {
-    if (!session?.access_token) return;
+    if (!isSignedIn) return;
     setInsightsLoading(true);
 
     try {
+      const token = await getToken();
       const res = await fetch('/api/insights', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ headers: tableHeaders, transactions: tableRows }),
       });
@@ -214,10 +219,7 @@ export default function ConvertPage() {
               <Tag color="gray">{usageLeft === null ? 'Unlimited' : `${usageLeft} left today`}</Tag>
             ) : (
               <span className="text-brutal-muted">
-                {usageLeft !== null ? `${usageLeft} left today` : ''} &middot;{' '}
-                <a href="/signup" className="font-bold text-brutal-black hover:text-brutal-yellow transition-colors">
-                  Sign up &rarr; 5/day free
-                </a>
+                {usageLeft !== null ? `${usageLeft} left today` : ''} &middot; Sign in for 5/day free
               </span>
             )}
           </div>

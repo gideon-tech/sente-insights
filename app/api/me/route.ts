@@ -1,35 +1,35 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { getEffectiveTier } from '@/lib/tiers';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+    const clerkUser = await currentUser();
+    const email = clerkUser?.emailAddresses?.[0]?.emailAddress || '';
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('clerk_id', userId)
       .single();
 
     const { data: subscription } = await supabaseAdmin
       .from('subscriptions')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('status', 'active')
       .single();
 
-    // Apply admin override
-    const effectiveTier = getEffectiveTier(profile?.tier || 'free', user.email);
-    const effectiveProfile = profile ? { ...profile, tier: effectiveTier } : profile;
+    const effectiveTier = getEffectiveTier(profile?.tier || 'free', email);
+    const effectiveProfile = profile
+      ? { ...profile, tier: effectiveTier }
+      : { clerk_id: userId, email, full_name: clerkUser?.fullName || null, avatar_url: clerkUser?.imageUrl || null, tier: effectiveTier };
 
     return NextResponse.json({
       profile: effectiveProfile,

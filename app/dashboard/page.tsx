@@ -9,26 +9,31 @@ import Badge from '@/components/ui/Badge';
 import Tag from '@/components/ui/Tag';
 import Label from '@/components/ui/Label';
 import Card from '@/components/ui/Card';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth } from '@clerk/nextjs';
+import { useProfile } from '@/lib/use-profile';
 import type { Conversion } from '@/types';
 
 export default function DashboardPage() {
-  const { profile, session, loading: authLoading } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
   const [conversions, setConversions] = useState<Conversion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const authLoading = !isLoaded || profileLoading;
+
   useEffect(() => {
-    if (authLoading) return;
-    if (!session?.access_token) {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
       setLoading(false);
       return;
     }
 
     async function fetchHistory() {
       try {
+        const token = await getToken();
         const res = await fetch('/api/history', {
-          headers: { Authorization: `Bearer ${session!.access_token}` },
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error('Failed to load history');
         const data = await res.json();
@@ -41,7 +46,7 @@ export default function DashboardPage() {
     }
 
     fetchHistory();
-  }, [session, authLoading]);
+  }, [isLoaded, isSignedIn, getToken]);
 
   // Not logged in
   if (!authLoading && !profile) {
@@ -55,8 +60,8 @@ export default function DashboardPage() {
             <p className="font-body text-sm text-brutal-muted mb-6">
               Your conversion history and stats are saved to your account.
             </p>
-            <Link href="/login">
-              <Button variant="primary" fullWidth>Log In</Button>
+            <Link href="/convert">
+              <Button variant="primary" fullWidth>Sign In to Get Started</Button>
             </Link>
           </Card>
         </main>
