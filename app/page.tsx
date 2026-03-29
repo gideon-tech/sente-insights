@@ -4,7 +4,6 @@ import Hero from '@/components/landing/Hero';
 import HowItWorks from '@/components/landing/HowItWorks';
 import WhoItsFor from '@/components/landing/WhoItsFor';
 import SupportedBanks from '@/components/landing/SupportedBanks';
-import PricingCards from '@/components/landing/PricingCards';
 
 export default function LandingPage() {
   return (
@@ -15,7 +14,6 @@ export default function LandingPage() {
         <HowItWorks />
         <WhoItsFor />
         <SupportedBanks />
-        <PricingCards />
 
         {/* CTA Section */}
         <section className="bg-brutal-yellow border-y-[3px] border-brutal-black py-20 px-6 text-center">

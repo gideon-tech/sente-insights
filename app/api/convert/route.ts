@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { uploadAndConvert, waitUntilComplete } from '@/lib/bsc';
-import { TIER_CONFIG, getEffectiveTier } from '@/lib/tiers';
+import { TIER_CONFIG, getEffectiveTier, canUseFormat, type ExportFormat } from '@/lib/tiers';
 import { cookies } from 'next/headers';
 import type { Tier } from '@/types';
 import type { Transaction } from '@/types';
@@ -62,6 +62,11 @@ export async function POST(request: NextRequest) {
 
     if (currentUsage >= config.dailyLimit) {
       return NextResponse.json({ error: 'Daily conversion limit reached', limit: config.dailyLimit }, { status: 429 });
+    }
+
+    // Validate export format against tier
+    if (!canUseFormat(tier as Tier, format.toLowerCase() as ExportFormat)) {
+      return NextResponse.json({ error: 'Export format not available for your tier', allowedFormats: config.formats }, { status: 403 });
     }
 
     const fileInfo = { name: file.name, size: file.size, type: file.type };

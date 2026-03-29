@@ -17,6 +17,7 @@ export default function Navbar() {
     { href: '/convert', label: 'Convert' },
     ...(profile ? [{ href: '/dashboard', label: 'Dashboard' }] : []),
     { href: '/pricing', label: 'Pricing' },
+    { href: '/guides', label: 'Guides' },
   ];
 
   return (
